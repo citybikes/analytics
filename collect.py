@@ -16,6 +16,26 @@ conn = sqlite3.connect(DB_URI)
 
 cur = conn.cursor()
 cur.executescript("""
+    CREATE TABLE IF NOT EXISTS networks (
+        tag TEXT PRIMARY KEY,
+        name TEXT,
+        latitude REAL,
+        longitude REAL,
+        meta BLOB
+    ) WITHOUT ROWID;
+
+    CREATE INDEX IF NOT EXISTS idx_networks_tag ON networks (tag);
+
+    CREATE TABLE IF NOT EXISTS stations (
+        hash TEXT PRIMARY KEY,
+        name TEXT,
+        latitude REAL,
+        longitude REAL,
+        network_tag TEXT
+    ) WITHOUT ROWID;
+
+    CREATE INDEX IF NOT EXISTS idx_stations_hash ON stations (hash);
+
     CREATE TABLE IF NOT EXISTS stats (
         id INTEGER PRIMARY KEY,
         entity_id TEXT,
@@ -49,6 +69,49 @@ class StatCollector(ZMQConsumer):
         log.info("Processing %s", meta)
 
         cursor = conn.cursor()
+
+        cursor.execute("""
+            INSERT INTO networks (tag, name, latitude, longitude, meta)
+            VALUES (?, ?, ?, ?, json(?))
+            ON CONFLICT(tag) DO UPDATE SET
+                name=excluded.name,
+                latitude=excluded.latitude,
+                longitude=excluded.longitude,
+                meta=json(excluded.meta)
+        """, (
+            network['tag'],
+            meta['name'],
+            meta['latitude'],
+            meta['longitude'],
+            json.dumps(meta),
+        ))
+
+        conn.commit()
+
+        stations_iter = (
+            (
+                s["id"],
+                s["name"],
+                s["latitude"],
+                s["longitude"],
+                network['tag'],
+            )
+            for s in network["stations"]
+        )
+
+        cursor.executemany(
+            """
+            INSERT INTO stations (hash, name, latitude, longitude, network_tag)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(hash) DO UPDATE SET
+                name=excluded.name,
+                latitude=excluded.latitude,
+                longitude=excluded.longitude,
+                network_tag=excluded.network_tag
+        """,
+            stations_iter,
+        )
+        conn.commit()
 
         data_iter = (
             (
