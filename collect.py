@@ -18,17 +18,24 @@ cur = conn.cursor()
 cur.executescript("""
     CREATE TABLE IF NOT EXISTS stats (
         id INTEGER PRIMARY KEY,
-        entity_id TEXT,
         network_tag TEXT,
-        stat BLOB,
-        latitude REAL,
-        longitude REAL,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        station BLOB,
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        -- critical fields candidate for STORED (but VIRTUAL atm)
+        entity_id TEXT GENERATED ALWAYS AS (json_extract(station, '$.id')) VIRTUAL,
+        bikes INT GENERATED ALWAYS AS (json_extract(station, '$.bikes')) VIRTUAL,
+        free INT GENERATED ALWAYS AS (json_extract(station, '$.free')) VIRTUAL,
+        -- query fields
+        name TEXT GENERATED ALWAYS AS (json_extract(station, '$.name')) VIRTUAL,
+        latitude FLOAT GENERATED ALWAYS AS (json_extract(station, '$.latitude')) VIRTUAL,
+        longitude FLOAT GENERATED ALWAYS AS (json_extract(station, '$.longitude')) VIRTUAL
     );
 
     CREATE INDEX IF NOT EXISTS idx_entity_tag_timestamp ON stats (
         entity_id, network_tag, timestamp DESC
     );
+
+    CREATE INDEX IF NOT EXISTS idx_bikes_free ON stats (bikes, free);
 
     PRAGMA journal_mode = WAL;
     PRAGMA cache_size = 1000000000;
@@ -52,18 +59,8 @@ class StatCollector(ZMQConsumer):
 
         data_iter = (
             (
-                s["id"],
                 network["tag"],
-                json.dumps(
-                    {
-                        "bikes": s["bikes"],
-                        "free": s["free"],
-                        "timestamp": s["timestamp"],
-                        "extra": s["extra"],
-                    }
-                ),
-                s["latitude"],
-                s["longitude"],
+                json.dumps(s),
                 s["id"],
                 network["tag"],
                 s["bikes"],
@@ -73,20 +70,19 @@ class StatCollector(ZMQConsumer):
 
         cursor.executemany(
             """
-            INSERT INTO stats (entity_id, network_tag, stat, latitude, longitude)
-            SELECT ?, ?, json(?), ?, ?
+            INSERT INTO stats (network_tag, station)
+            SELECT ?, jsonb(?)
             WHERE NOT EXISTS (
                 SELECT 1 FROM (
-                    SELECT stat FROM stats
+                    SELECT bikes, free FROM stats
                     WHERE entity_id = ?
                       AND network_tag = ?
                     ORDER BY TIMESTAMP DESC
                     LIMIT 1
                 ) as ls
-                WHERE json(ls.stat)->>'bikes' = ? AND
-                      json(ls.stat)->>'free' = ?
+                WHERE bikes = ?
+                  AND free = ?
             )
-
             """,
             data_iter,
         )
