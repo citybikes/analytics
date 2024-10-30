@@ -37,6 +37,19 @@ cur.executescript("""
 
     CREATE INDEX IF NOT EXISTS idx_bikes_free ON stats (bikes, free);
 
+    -- this is an expensive query that can be used to get the last status
+    -- for every station. Useful for warming up a cache
+    CREATE VIEW IF NOT EXISTS last_stat AS
+      SELECT entity_id, network_tag, bikes, free, json(station) FROM (
+        SELECT *, ROW_NUMBER() OVER (
+                PARTITION BY entity_id, network_tag
+                ORDER BY timestamp DESC
+             ) AS row_n
+        FROM stats
+      )
+      WHERE row_n = 1
+    ;
+
     PRAGMA journal_mode = WAL;
     PRAGMA cache_size = 1000000000;
     PRAGMA foreign_keys = true;
@@ -48,6 +61,27 @@ conn.commit()
 
 log = logging.getLogger("collector")
 
+log.info("Warming up stat dedupe cache...")
+
+cur = conn.execute(""" SELECT * FROM last_stat """)
+
+last_stat = {}
+
+while (data:=cur.fetchmany(1000)):
+    for uid, tag, bikes, free, _ in data:
+        key = f"{uid}-{tag}"
+        last_stat[key] = (bikes, free)
+
+def cache_filter(tag, uid, station):
+    key = f"{uid}-{tag}"
+    val = (station['bikes'], station['free'])
+
+    last = last_stat.setdefault(key, (None, None))
+
+    last_stat[key] = val
+
+    return last == val
+
 
 class StatCollector(ZMQConsumer):
     def handle_message(self, topic, message):
@@ -57,40 +91,34 @@ class StatCollector(ZMQConsumer):
 
         cursor = conn.cursor()
 
+        tag = network['tag']
+
+        stations = filter(
+            lambda s: not cache_filter(tag, s['id'], s),
+            network['stations']
+        )
+
+        # unroll for now - useful for debugging
+        stations = list(stations)
+
+        log.info("[%s] %d from %d stations changed", tag, len(stations), len(network['stations']))
+
         data_iter = (
             (
-                network["tag"],
+                tag,
                 json.dumps(s),
-                s["id"],
-                network["tag"],
-                s["bikes"],
-                s["free"],
-            ) for s in network['stations']
+            ) for s in stations
         )
 
         cursor.executemany(
             """
             INSERT INTO stats (network_tag, station)
-            SELECT ?, jsonb(?)
-            WHERE NOT EXISTS (
-                SELECT 1 FROM (
-                    SELECT bikes, free FROM stats
-                    WHERE entity_id = ?
-                      AND network_tag = ?
-                    ORDER BY TIMESTAMP DESC
-                    LIMIT 1
-                ) as ls
-                WHERE bikes = ?
-                  AND free = ?
-            )
+            VALUES (?, jsonb(?))
             """,
             data_iter,
         )
         conn.commit()
-        log.info(
-            "[%s] Finished processing %d stations"
-            % (network["tag"], len(network["stations"]))
-        )
+        log.info("[%s] Finished processing %d stations", tag, len(stations))
 
 
 def shutdown(* args, ** kwargs):
