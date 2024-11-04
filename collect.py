@@ -61,16 +61,16 @@ conn.commit()
 
 log = logging.getLogger("collector")
 
-log.info("Warming up stat dedupe cache...")
-
-cur = conn.execute(""" SELECT * FROM last_stat """)
+# log.info("Warming up stat dedupe cache...")
+#
+# cur = conn.execute(""" SELECT * FROM last_stat """)
 
 last_stat = {}
 
-while (data:=cur.fetchmany(1000)):
-    for uid, tag, bikes, free, _ in data:
-        key = f"{uid}-{tag}"
-        last_stat[key] = (bikes, free)
+# while (data:=cur.fetchmany(1000)):
+#     for uid, tag, bikes, free, _ in data:
+#         key = f"{uid}-{tag}"
+#         last_stat[key] = (bikes, free)
 
 def cache_filter(tag, uid, station):
     key = f"{uid}-{tag}"
