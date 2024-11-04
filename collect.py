@@ -51,7 +51,8 @@ cur.executescript("""
     ;
 
     PRAGMA journal_mode = WAL;
-    PRAGMA cache_size = 1000000000;
+    -- default: 2000 (page) - 1 page: 1.5k
+    PRAGMA cache_size = 20000;
     PRAGMA foreign_keys = true;
     PRAGMA busy_timeout = 5000;
 
