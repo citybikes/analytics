@@ -7,7 +7,7 @@ import argparse
 import sqlite3
 from importlib import resources
 
-from hyper.consumer import ZMQConsumer
+from hyper.subscriber import ZMQSubscriber
 
 
 DB_URI = os.getenv("DB_URI", "citybikes.db")
@@ -71,7 +71,7 @@ def cache_filter(tag, uid, station):
     return last == val
 
 
-class StatCollector(ZMQConsumer):
+class StatCollector(ZMQSubscriber):
     def handle_message(self, topic, message):
         network = json.loads(message)
         meta = network["meta"]
