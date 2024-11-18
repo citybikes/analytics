@@ -12,13 +12,13 @@ $ pip install -r requirements.txt
 ## Usage
 
 First, let's fire up a producer for bike share information, by using citybikes
-[hyper producer].
+[hyper publisher].
 
 ```console
-$ python -m hyper.producer
+$ hyper publisher
 ```
 
-[hyper producer]: https://github.com/citybikes/hyper
+[hyper publisher]: https://github.com/citybikes/hyper
 
 The producer will open a tcp socket at port 5555, so we can connect our data
 collector to
