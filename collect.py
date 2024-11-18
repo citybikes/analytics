@@ -5,6 +5,7 @@ import json
 import logging
 import argparse
 import sqlite3
+from importlib import resources
 
 from hyper.consumer import ZMQConsumer
 
@@ -13,54 +14,40 @@ DB_URI = os.getenv("DB_URI", "citybikes.db")
 ZMQ_ADDR = os.getenv("ZMQ_ADDR", "tcp://127.0.0.1:5555")
 
 conn = sqlite3.connect(DB_URI)
-
 cur = conn.cursor()
 cur.executescript("""
-    CREATE TABLE IF NOT EXISTS stats (
-        id INTEGER PRIMARY KEY,
-        network_tag TEXT,
-        station BLOB,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-        -- critical fields candidate for STORED (but VIRTUAL atm)
-        entity_id TEXT GENERATED ALWAYS AS (json_extract(station, '$.id')) VIRTUAL,
-        bikes INT GENERATED ALWAYS AS (json_extract(station, '$.bikes')) VIRTUAL,
-        free INT GENERATED ALWAYS AS (json_extract(station, '$.free')) VIRTUAL,
-        -- query fields
-        name TEXT GENERATED ALWAYS AS (json_extract(station, '$.name')) VIRTUAL,
-        latitude FLOAT GENERATED ALWAYS AS (json_extract(station, '$.latitude')) VIRTUAL,
-        longitude FLOAT GENERATED ALWAYS AS (json_extract(station, '$.longitude')) VIRTUAL
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_entity_tag_timestamp ON stats (
-        entity_id, network_tag, timestamp DESC
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_bikes_free ON stats (bikes, free);
-
-    -- this is an expensive query that can be used to get the last status
-    -- for every station. Useful for warming up a cache
-    CREATE VIEW IF NOT EXISTS last_stat AS
-      SELECT entity_id, network_tag, bikes, free, json(station) FROM (
-        SELECT *, ROW_NUMBER() OVER (
-                PARTITION BY entity_id, network_tag
-                ORDER BY timestamp DESC
-             ) AS row_n
-        FROM stats
-      )
-      WHERE row_n = 1
-    ;
-
     PRAGMA journal_mode = WAL;
     -- default: 2000 (page) - 1 page: 1.5k
     PRAGMA cache_size = 20000;
     PRAGMA foreign_keys = true;
     PRAGMA busy_timeout = 5000;
-
 """)
 conn.commit()
 
-
 log = logging.getLogger("collector")
+
+# XXX move into a function/module
+current_version,  = next(
+    conn.cursor().execute('PRAGMA user_version'),
+    (None, )
+)
+
+migrations = [
+    f for f in resources.files('migrations').iterdir()
+]
+
+for migration in migrations[current_version:]:
+    cur = conn.cursor()
+    try:
+        log.info("Applying %s", migration.name)
+        cur.executescript("begin;" + migration.read_text())
+    except Exception as e:
+        log.error("Failed migration %s: %s. Bye", migration.name, e)
+        cur.execute("rollback")
+        sys.exit(1)
+    else:
+        cur.execute("commit")
+# XXX end
 
 # log.info("Warming up stat dedupe cache...")
 #
