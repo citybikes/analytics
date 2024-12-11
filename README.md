@@ -76,3 +76,26 @@ $ bash export.sh parquet stats.duck --from 2024-11-01 --to 2024-11-15 --network 
 $ bash export.sh csv stats.duck --from 2024-11-01 --to 2024-11-15 --network bicing > bicing.csv
 $ bash export.sh parquet stats.duck -o world.parquet
 ```
+
+### Visualizing
+
+Use the plot script to visualize information. This script requires duckdb and
+a python environment with matplotlib.
+
+```console
+duckdb -s "COPY(\
+    select tag, nuid, name, bikes, extra.ebikes, bikes::int-extra.ebikes::int as normal, free, timestamp \
+    from read_parquet('cb.parquet') \
+    where tag='bicing' and nuid='100' \
+) TO '/dev/stdout' WITH (FORMAT 'csv', HEADER)" | python plot.py -s 5min - -p Blues
+```
+![plot](https://github.com/user-attachments/assets/afc5cea3-279f-4c2c-957e-5df320dd1cba)
+
+```console
+duckdb -s "COPY(\
+    select tag, nuid, name, bikes, extra.ebikes, bikes::int-extra.ebikes::int as normal, free, timestamp \
+    from read_parquet('cb.parquet') \
+    where tag='bicing' \
+) TO '/dev/stdout' WITH (FORMAT 'csv', HEADER)" | python plot.py -s 5min -
+```
+![plot](https://github.com/user-attachments/assets/e5502607-ce95-47a7-8252-b4fdc1a1cf79)
