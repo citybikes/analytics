@@ -28,3 +28,6 @@ __pycache__/
 /.env
 /citybikes.db*
 /config.py
+/*.db*
+/*.duck*
+/*.parquet
