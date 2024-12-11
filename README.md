@@ -91,6 +91,17 @@ duckdb -s "COPY(\
 ```
 ![plot](https://github.com/user-attachments/assets/afc5cea3-279f-4c2c-957e-5df320dd1cba)
 
+
+```console
+duckdb -s "COPY(\
+    select tag, nuid, name, bikes, extra.ebikes, bikes::int-extra.ebikes::int as normal, free, timestamp \
+    from read_parquet('cb.parquet') \
+    where tag='citi-bike-nyc' and nuid='66ddbd20-0aca-11e7-82f6-3863bb44ef7c' \
+) TO '/dev/stdout' WITH (FORMAT 'csv', HEADER)" | python plot.py -s 5min -
+```
+![plot](https://github.com/user-attachments/assets/ba6269a1-c6c0-4c8a-bc60-e1d09d505f6f)
+
+
 ```console
 duckdb -s "COPY(\
     select tag, nuid, name, bikes, extra.ebikes, bikes::int-extra.ebikes::int as normal, free, timestamp \
