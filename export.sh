@@ -209,8 +209,8 @@ CREATE VIEW IF NOT EXISTS _deduped AS (
     )
     SELECT * FROM st_window
     WHERE
-        (bikes <> prev_bikes AND free <> prev_free) OR
-        (prev_bikes IS NULL and prev_free IS NULL)
+        bikes <> prev_bikes OR free <> prev_free OR
+        (prev_bikes IS NULL AND prev_free IS NULL)
 );
 EOF
         ;;
@@ -264,7 +264,7 @@ COPY (
     deduped AS (
       SELECT * FROM st_window
       WHERE
-          (bikes <> prev_bikes AND free <> prev_free) OR
+          bikes <> prev_bikes OR free <> prev_free OR
           (prev_bikes IS NULL and prev_free IS NULL)
     )
 
