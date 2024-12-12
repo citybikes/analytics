@@ -174,8 +174,8 @@ function main {
         sqlite3 --csv $sqlfile << EOF > $tmpfile
 SELECT network_tag, json(station), timestamp FROM stats
 WHERE true
-  ${EXP_FROM:+"AND timestamp > $EXP_FROM"}
-  ${EXP_TO:+"AND timestamp < $EXP_TO"}
+  ${EXP_FROM:+"AND timestamp > '$EXP_FROM'"}
+  ${EXP_TO:+"AND timestamp < '$EXP_TO'"}
   ${EXP_NETWORK:+"AND network_tag = '$EXP_NETWORK'"}
 ;
 EOF
