@@ -52,19 +52,22 @@ for migration in migrations[current_version:]:
 log.info("Warming up stat dedupe cache...")
 
 cur = conn.execute("""
-    SELECT entity_id, network_tag, bikes, free FROM last_stats
+    SELECT entity_id, nuid, network_tag, bikes, free FROM last_stats
 """)
+
 
 last_stat = {}
 
 while (data:=cur.fetchmany(1000)):
-    for uid, tag, bikes, free in data:
-        key = f"{uid}-{tag}"
+    for uid, nuid, tag, bikes, free in data:
+        key = '-'.join(map(str, filter(None, [uid, nuid, tag])))
         last_stat[key] = (bikes, free)
 
 
-def cache_filter(tag, uid, station):
-    key = f"{uid}-{tag}"
+def cache_filter(tag, station):
+    uid = station['id']
+    nuid = station['extra'].get('uid')
+    key = '-'.join(map(str, filter(None, [uid, nuid, tag])))
     val = (station['bikes'], station['free'])
 
     last = last_stat.setdefault(key, (None, None))
@@ -84,10 +87,7 @@ class StatCollector(ZMQSubscriber):
 
         tag = network['tag']
 
-        stations = filter(
-            lambda s: not cache_filter(tag, s['id'], s),
-            network['stations']
-        )
+        stations = filter(lambda s: not cache_filter(tag, s), network['stations'])
 
         # unroll for now - useful for debugging
         stations = list(stations)
