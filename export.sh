@@ -189,6 +189,7 @@ CREATE TABLE IF NOT EXISTS stats (
 
 COPY stats from '$tmpfile';
 
+-- useful view for manual working with duck db file
 CREATE VIEW IF NOT EXISTS _deduped AS (
     WITH st_window AS (
         SELECT network_tag,
@@ -201,10 +202,10 @@ CREATE VIEW IF NOT EXISTS _deduped AS (
         FROM stats
         WINDOW st AS(
             PARTITION BY network_tag, station.id, station.extra.uid
-            ORDER BY timestamp DESC
+            ORDER BY timestamp ASC
         )
         ORDER BY network_tag, station.id, station.extra.uid,
-                 timestamp DESC
+                 timestamp ASC
     )
     SELECT * FROM st_window
     WHERE
@@ -255,10 +256,10 @@ COPY (
           ${EXP_NETWORK:+"AND network_tag = '$EXP_NETWORK'"}
         WINDOW st AS(
             PARTITION BY network_tag, station.id, station.extra.uid
-            ORDER BY timestamp DESC
+            ORDER BY timestamp ASC
         )
         ORDER BY network_tag, station.id, station.extra.uid,
-                 timestamp DESC
+                 timestamp ASC
     ),
     deduped AS (
       SELECT * FROM st_window
