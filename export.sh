@@ -39,6 +39,7 @@ EXP_MONTHLY=${EXP_MONTHLY:-0}
 EXP_NETWORK=${EXP_NETWORK}
 EXP_OUT=${EXP_OUT:-'/dev/stdout'}
 EXP_ZSTD_C_LVL=${EXP_ZSTD_C_LVL:-1}
+EXP_FORCE=${EXP_FORCE}
 
 function usage {
   cat << EOF
@@ -61,6 +62,7 @@ Options:
   --monthly         do montly exports on interval
   --yearly          do yearly exports on interval
   --zstd            ZSTD compression level
+  -f, --force       force action
   -o, --out         export output file (defaults to stdout)
   -V, --verbose     echo every command that gets executed
   -h, --help        display this help
@@ -125,6 +127,9 @@ function parse_args {
         EXP_OUT=$2
         shift
         ;;
+      -f|--force)
+        EXP_FORCE=1
+        ;;
       -)
         _ARGS+=("$(cat "$2")")
         shift
@@ -153,13 +158,14 @@ function main {
   case $ACTION in
       # Dumps sqlite db into a CSV with json columns and imports them on
       # a duckdb. Necessary because duckdb does not support JSONB columns
-      quack)
+      quack|duck)
         [[ -z $1 ]] && err! "Please provide input sqlite db filename"
         local sqlfile=$1; shift
         ! [[ -f $sqlfile ]] && err! "$sqlfile not found"
-        [[ -z $1 ]] && err! "Please provide output duckdb filename"
-        local duckfile=$1; shift
-
+        local duckfile=${1:-${sqlfile%%.*}.duck}
+        [[ -f $duckfile ]] && [[ -z $EXP_FORCE ]] && \
+          err! "$duckfile exists, use -f to force" || \
+          warn "quacking $duckfile"
         tmpfile=$(mktemp -u /tmp/cb-export.csv.XXXXX)
         inf "Converting to CSV in $tmpfile"
         on_exit "rm -f $tmpfile"
@@ -172,8 +178,8 @@ WHERE true
   ${EXP_NETWORK:+"AND network_tag = '$EXP_NETWORK'"}
 ;
 EOF
-          inf "Populating $duckfile with data"
-          duckdb $duckfile << EOF
+        inf "Populating $duckfile with data"
+        duckdb $duckfile << EOF
 CREATE TABLE IF NOT EXISTS stats (
     network_tag VARCHAR,
     station JSON,
