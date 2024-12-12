@@ -71,7 +71,7 @@ Options:
 Commands:
   help                            Show usage
 
-  quack cb.db cb.duck             Import a SQLite DB into a duckdb
+  quack cb.db cb.duck             SQLite DB to duckdb
 
   parquet cb.duck                 Export stat data as parquet file
   csv cb.duck                     Export stat data as csv file
