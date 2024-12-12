@@ -38,6 +38,7 @@ EXP_YEARLY=${EXP_YEARLY:-0}
 EXP_MONTHLY=${EXP_MONTHLY:-0}
 EXP_NETWORK=${EXP_NETWORK}
 EXP_OUT=${EXP_OUT:-'/dev/stdout'}
+EXP_ZSTD_C_LVL=${EXP_ZSTD_C_LVL:-1}
 
 function usage {
   cat << EOF
@@ -59,6 +60,7 @@ Options:
   --network         filter by network tag
   --monthly         do montly exports on interval
   --yearly          do yearly exports on interval
+  --zstd            ZSTD compression level
   -o, --out         export output file (defaults to stdout)
   -V, --verbose     echo every command that gets executed
   -h, --help        display this help
@@ -114,6 +116,10 @@ function parse_args {
         ;;
       --monthly)
         EXP_MONTHLY=1
+        ;;
+      --zstd)
+        EXP_ZSTD_C_LVL=$2
+        shift
         ;;
       -o|--out)
         EXP_OUT=$2
@@ -199,31 +205,33 @@ CREATE VIEW IF NOT EXISTS _deduped AS (
         (prev_bikes IS NULL and prev_free IS NULL)
 );
 EOF
-          ;;
-        parquet|csv|custom)
+        ;;
+      parquet|csv|custom)
 
-          ! [[ -f $1 ]] && err! "Please provide a duckdb"
+        ! [[ -f $1 ]] && err! "Please provide a duckdb"
 
-          local duckfile=$1; shift
+        local duckfile=$1; shift
 
-          local format
+        local format
 
-          case $ACTION in
-              parquet)
-                format="FORMAT 'PARQUET', CODEC 'ZSTD'"
-                ;;
-              csv)
-                format="FORMAT 'csv', HEADER"
-                ;;
-              custom)
-                format="${_NP_ARGS[@]}"
-                ;;
-              *)
-                err! "Unrecognized format $ACTION"
-                ;;
-          esac
+        case $ACTION in
+            parquet)
+              format="FORMAT 'PARQUET', \
+                      CODEC 'ZSTD', \
+                      COMPRESSION_LEVEL $EXP_ZSTD_C_LVL"
+              ;;
+            csv)
+              format="FORMAT 'csv', HEADER"
+              ;;
+            custom)
+              format="${_NP_ARGS[@]}"
+              ;;
+            *)
+              err! "Unrecognized format $ACTION"
+              ;;
+        esac
 
-          duckdb $duckfile << EOF
+        duckdb $duckfile << EOF
 COPY (
     WITH st_window AS (
         SELECT network_tag,
@@ -270,15 +278,15 @@ COPY (
     ORDER BY tag, id, nuid, timestamp ASC
 ) TO '$EXP_OUT' WITH ($format);
 EOF
-          ;;
-        help)
-          usage
-          ;;
-        *)
-          usage
-          exit 1
-          ;;
-    esac
+        ;;
+      help)
+        usage
+        ;;
+      *)
+        usage
+        exit 1
+        ;;
+  esac
 }
 
 main "$@"
