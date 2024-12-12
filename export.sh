@@ -38,7 +38,8 @@ EXP_YEARLY=${EXP_YEARLY:-0}
 EXP_MONTHLY=${EXP_MONTHLY:-0}
 EXP_NETWORK=${EXP_NETWORK}
 EXP_OUT=${EXP_OUT:-'/dev/stdout'}
-EXP_ZSTD_C_LVL=${EXP_ZSTD_C_LVL:-1}
+# anything between 10 and 15 has a good CPU time / filesize ratio
+EXP_ZSTD_C_LVL=${EXP_ZSTD_C_LVL:-10}
 EXP_FORCE=${EXP_FORCE}
 
 function usage {
