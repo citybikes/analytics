@@ -34,6 +34,7 @@ ACTION=${ACTION}
 EXP=$(basename $0)
 EXP_FROM=${EXP_FROM}
 EXP_TO=${EXP_TO}
+EXP_ALL=${EXP_ALL}
 EXP_YEARLY=${EXP_YEARLY:-0}
 EXP_MONTHLY=${EXP_MONTHLY:-0}
 EXP_NETWORK=${EXP_NETWORK}
@@ -60,6 +61,7 @@ Options:
   --from            start date interval (YYYY-MM-DD)
   --to              end date interval (YYYY-MM-DD)
   --network         filter by network tag
+  --all             export each network on a separate file
   --monthly         do montly exports on interval
   --yearly          do yearly exports on interval
   --zstd            ZSTD compression level
@@ -124,6 +126,9 @@ function parse_args {
         EXP_ZSTD_C_LVL=$2
         shift
         ;;
+      --all)
+        EXP_ALL=1
+        ;;
       -o|--out)
         EXP_OUT=$2
         shift
@@ -145,6 +150,35 @@ function parse_args {
         ;;
     esac
     shift
+  done
+}
+
+
+function export_all {
+  local networks=($(duckdb $1 --list --noheader << EOF
+  SELECT DISTINCT(network_tag) FROM stats
+  ORDER BY network_tag ASC
+  ;
+EOF
+))
+  [[ $EXP_OUT == "/dev/stdout" ]] && err! "Output can't be stdout"
+  local where=$(dirname $EXP_OUT)
+  mkdir -p $where
+
+  local args=()
+  args+=("$2")
+  args+=("$1")
+  [[ -n $EXP_FROM ]] && args+=("--from $EXP_FROM")
+  [[ -n $EXP_TO ]] && args+=("--to $EXP_TO")
+  local basename=${EXP_OUT%%.*}
+  local extension=${EXP_OUT##*.}
+  [[ "$basename" == "$extension" ]] && extension="$2"
+  local filename
+  for network in ${networks[@]}; do
+    filename="$basename-$network-stats.$extension"
+    [[ -f $filename ]] && [[ -z $EXP_FORCE ]] && \
+      err! "File exists, use -f to force overwrite"
+    $(realpath $0) ${args[@]} --network $network -o $filename &> /dev/null
   done
 }
 
@@ -220,6 +254,11 @@ EOF
 
         local duckfile=$1; shift
 
+        [[ -n $EXP_ALL ]] && {
+          export_all $duckfile $ACTION
+          exit $?
+        }
+
         local format
 
         case $ACTION in
@@ -239,7 +278,7 @@ EOF
               ;;
         esac
 
-        duckdb $duckfile << EOF
+        duckdb -readonly $duckfile << EOF
 COPY (
     WITH st_window AS (
         SELECT network_tag,
