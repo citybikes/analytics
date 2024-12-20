@@ -27,6 +27,18 @@ function clear_exit {
 }
 
 trap on_exit_fn EXIT SIGINT
+
+function barsh {
+  [[ $# -lt 2 ]] && return 1
+  local val=$1; local bas=$2; local txt=$3; local wid=$4;
+
+  [[ -z $wid ]] && { [[ -z $txt ]] && wid=$bas || wid=${#txt} ; }
+  [[ -z $txt ]] && txt="$(printf '%*s' "$wid" '')"
+  [[ $wid -gt ${#txt} ]] && txt=$txt$(printf '%*s' $((${#txt} - wid)) '')
+
+  local per=$(( (wid * val) / bas ))
+  printf "\033[7m%s\033[27m%s" "${txt:0:$per}" "${txt:$per:$((wid-per))}"
+}
 ###################################
 
 ACTION=${ACTION}
@@ -174,11 +186,18 @@ EOF
   local extension=${EXP_OUT##*.}
   [[ "$basename" == "$extension" ]] && extension="$2"
   local filename
+  local i=1
+  local per
   for network in ${networks[@]}; do
+    per=$(( ($i * 100) / ${#networks[@]} ))
     filename="$basename-$network-stats.$extension"
     [[ -f $filename ]] && [[ -z $EXP_FORCE ]] && \
       err! "File exists, use -f to force overwrite"
+    printf "\033[0G\033[K\033[34m%b\033[0m" \
+      "$(barsh $i ${#networks[@]} \
+        "│$i/${#networks[@]}:${per}%│ $network → $filename" $COLUMNS)"
     $(realpath $0) ${args[@]} --network $network -o $filename &> /dev/null
+    ((i+=1))
   done
 }
 
