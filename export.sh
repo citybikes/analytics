@@ -95,6 +95,7 @@ Commands:
     $ $EXP quack cb.db cb.duck
     $ $EXP parquet cb.duck --from 2024-11-01 --to 2024-11-05 > out.parquet
     $ $EXP csv cb.duck --from 2024-11-01 --to 2024-11-05 -o out.csv
+    $ $EXP parquet --all --from 2024-11-01 --to 2024-12-01 -o dump/202411
     $ $EXP custom cb.duck --network bicing -o out.parquet -- \\
         "FORMAT 'parquet', CODEC 'zstd', COMPRESSION_LEVEL 22"
 
