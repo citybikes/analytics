@@ -183,9 +183,10 @@ EOF
   args+=("$1")
   [[ -n $EXP_FROM ]] && args+=("--from $EXP_FROM")
   [[ -n $EXP_TO ]] && args+=("--to $EXP_TO")
-  local basename=${EXP_OUT%%.*}
+  local basename=${EXP_OUT%.*}
   local extension=${EXP_OUT##*.}
   [[ "$basename" == "$extension" ]] && extension="$2"
+
   local filename
   local i=1
   local per
@@ -217,7 +218,7 @@ function main {
         [[ -z $1 ]] && err! "Please provide input sqlite db filename"
         local sqlfile=$(realpath $1); shift
         ! [[ -f $sqlfile ]] && err! "$sqlfile not found"
-        local duckfile=${1:-${sqlfile%%.*}.duck}
+        local duckfile=${1:-${sqlfile%.*}.duck}
         [[ -f $duckfile ]] && [[ -z $EXP_FORCE ]] && \
           err! "$duckfile exists, use -f to force" || \
           warn "quacking $duckfile"
