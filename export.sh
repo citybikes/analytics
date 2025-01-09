@@ -221,7 +221,7 @@ function main {
         [[ -f $duckfile ]] && [[ -z $EXP_FORCE ]] && \
           err! "$duckfile exists, use -f to force" || \
           warn "quacking $duckfile"
-        tmpfile=$(mktemp -u /tmp/cb-export.csv.XXXXX)
+        tmpfile=$(mktemp -u cb-export.csv.XXXXX)
         inf "Converting to CSV in $tmpfile"
         on_exit "rm -f $tmpfile"
 
