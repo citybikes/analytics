@@ -178,21 +178,23 @@ EOF
   local where=$(dirname $EXP_OUT)
   mkdir -p $where
 
+  local bname=$(basename $EXP_OUT)
+  local prefix=${bname%.*}
+  local extension=${bname##*.}
+  [[ "$prefix" == "$extension" ]] && extension="$2"
+
   local args=()
   args+=("$2")
   args+=("$1")
   [[ -n $EXP_FROM ]] && args+=("--from $EXP_FROM")
   [[ -n $EXP_TO ]] && args+=("--to $EXP_TO")
-  local basename=${EXP_OUT%.*}
-  local extension=${EXP_OUT##*.}
-  [[ "$basename" == "$extension" ]] && extension="$2"
 
   local filename
   local i=1
   local per
   for network in ${networks[@]}; do
     per=$(( ($i * 100) / ${#networks[@]} ))
-    filename="$basename-$network-stats.$extension"
+    filename="$where/$prefix-$network-stats.$extension"
     [[ -f $filename ]] && [[ -z $EXP_FORCE ]] && \
       err! "File exists, use -f to force overwrite"
     printf "\033[0G\033[K\033[34m%b\033[0m" \
