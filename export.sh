@@ -215,7 +215,7 @@ function main {
       # a duckdb. Necessary because duckdb does not support JSONB columns
       quack|duck)
         [[ -z $1 ]] && err! "Please provide input sqlite db filename"
-        local sqlfile=$1; shift
+        local sqlfile=$(realpath $1); shift
         ! [[ -f $sqlfile ]] && err! "$sqlfile not found"
         local duckfile=${1:-${sqlfile%%.*}.duck}
         [[ -f $duckfile ]] && [[ -z $EXP_FORCE ]] && \
