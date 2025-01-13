@@ -170,6 +170,9 @@ function parse_args {
 function export_all {
   local networks=($(duckdb $1 --list --noheader << EOF
   SELECT DISTINCT(network_tag) FROM stats
+  WHERE true
+    ${EXP_FROM:+"AND timestamp > '$EXP_FROM'"}
+    ${EXP_TO:+"AND timestamp < '$EXP_TO'"}
   ORDER BY network_tag ASC
   ;
 EOF
