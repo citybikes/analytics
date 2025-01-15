@@ -195,6 +195,7 @@ EOF
   local filename
   local i=1
   local per
+
   for network in ${networks[@]}; do
     per=$(( ($i * 100) / ${#networks[@]} ))
     filename="$where/$prefix-$network-stats.$extension"
@@ -203,7 +204,12 @@ EOF
     printf "\033[0G\033[K\033[34m%b\033[0m" \
       "$(barsh $i ${#networks[@]} \
         "│$i/${#networks[@]}:${per}%│ $network → $filename" $COLUMNS)"
-    $(realpath $0) ${args[@]} --network $network -o $filename &> /dev/null
+    # XXX kind of a hack
+    if [[ $2 == "csv.gz" ]]; then
+      $(realpath $0) ${args[@]} --network $network | gzip -cf > $filename
+    else
+      $(realpath $0) ${args[@]} --network $network -o $filename &> /dev/null
+    fi
     ((i+=1))
   done
 }
@@ -274,7 +280,7 @@ CREATE VIEW IF NOT EXISTS _deduped AS (
 );
 EOF
         ;;
-      parquet|csv|custom)
+      parquet|csv|csv.gz|custom)
 
         ! [[ -f $1 ]] && err! "Please provide a duckdb"
 
@@ -294,6 +300,9 @@ EOF
                       COMPRESSION_LEVEL $EXP_ZSTD_C_LVL"
               ;;
             csv)
+              format="FORMAT 'csv', HEADER"
+              ;;
+            csv.gz)
               format="FORMAT 'csv', HEADER"
               ;;
             custom)
