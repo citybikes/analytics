@@ -65,13 +65,11 @@ else:
     # Group by timestamp and aggregate columns
     resampled_df.reset_index(level='nuid', drop=True, inplace=True)
     resampled_df = resampled_df.groupby('timestamp').agg(
-        {'bikes': 'sum', 'ebikes': 'sum', 'normal': 'sum', 'free': 'sum'}).reset_index()
+        {'bikes': 'sum', 'free': 'sum'}).reset_index()
 
 x = resampled_df['timestamp']
 bikes = resampled_df['bikes']
 free = resampled_df['free']
-ebikes = resampled_df['ebikes']
-normal = resampled_df['normal']
 
 # Does not really interpolate values. This is useful for noisy sources
 # from scipy.ndimage import gaussian_filter1d
