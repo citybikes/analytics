@@ -183,7 +183,7 @@ EOF
 
   local bname=$(basename $EXP_OUT)
   local prefix=${bname%.*}
-  local extension=${bname##*.}
+  local extension=${bname#*.}
   [[ "$prefix" == "$extension" ]] && extension="$2"
 
   local args=()
