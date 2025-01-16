@@ -356,10 +356,6 @@ COPY (
            station.extra,
            timestamp
     FROM deduped
-    WHERE true
-      ${EXP_FROM:+"AND timestamp > '$EXP_FROM'"}
-      ${EXP_TO:+"AND timestamp < '$EXP_TO'"}
-      ${EXP_NETWORK:+"AND network_tag = '$EXP_NETWORK'"}
     ORDER BY tag, id, nuid, timestamp ASC
 ) TO '$EXP_OUT' WITH ($format);
 EOF
