@@ -45,7 +45,9 @@ ACTION=${ACTION}
 
 EXP=$(basename $0)
 EXP_FROM=${EXP_FROM}
+EXP_FROM_E=${EXP_FROM_E}
 EXP_TO=${EXP_TO}
+EXP_TO_I=${EXP_TO_I}
 EXP_ALL=${EXP_ALL}
 EXP_YEARLY=${EXP_YEARLY:-0}
 EXP_MONTHLY=${EXP_MONTHLY:-0}
@@ -70,8 +72,10 @@ function usage {
 Usage: $EXP action [options...]
 
 Options:
-  --from            start date interval (YYYY-MM-DD)
-  --to              end date interval (YYYY-MM-DD)
+  -ge, --from       start date interval inclusive (>= YYYY-MM-DD)
+  -gt, --efrom      start date interval exclusive (> YYYY-MM-DD)
+  -lt, --to         end date interval exclusive (< YYYY-MM-DD)
+  -le, --ito        end date interval inclusive (<= YYYY-MM-DD)
   --network         filter by network tag
   --all             export each network on a separate file
   --monthly         do montly exports on interval
@@ -120,12 +124,20 @@ function parse_args {
         usage
         exit 0
         ;;
-      --from)
+      --from|-ge)
         EXP_FROM=$2
         shift
         ;;
-      --to)
+      --efrom|-gt)
+        EXP_FROM_E=$2
+        shift
+        ;;
+      --to|-lt)
         EXP_TO=$2
+        shift
+        ;;
+      --ito|-le)
+        EXP_TO_I=$2
         shift
         ;;
       --network)
@@ -174,8 +186,10 @@ function export_all {
   local networks=($(duckdb $1 -readonly --list --noheader << EOF
   SELECT DISTINCT(network_tag) FROM stats
   WHERE true
-    ${EXP_FROM:+"AND timestamp > '$EXP_FROM'"}
+    ${EXP_FROM:+"AND timestamp >= '$EXP_FROM'"}
+    ${EXP_FROM_E:+"AND timestamp > '$EXP_FROM_E'"}
     ${EXP_TO:+"AND timestamp < '$EXP_TO'"}
+    ${EXP_TO_I:+"AND timestamp <= '$EXP_TO_I'"}
   ORDER BY network_tag ASC
   ;
 EOF
@@ -194,6 +208,8 @@ EOF
   args+=("$1")
   [[ -n $EXP_FROM ]] && args+=("--from $EXP_FROM")
   [[ -n $EXP_TO ]] && args+=("--to $EXP_TO")
+  [[ -n $EXP_FROM_E ]] && args+=("--efrom $EXP_FROM_E")
+  [[ -n $EXP_TO_I ]] && args+=("--ito $EXP_TO_I")
 
   local filename
   local i=1
@@ -243,8 +259,10 @@ function main {
         sqlite3 --csv $sqlfile << EOF > $tmpfile
 SELECT network_tag, json(station), timestamp FROM stats
 WHERE true
-  ${EXP_FROM:+"AND timestamp > '$EXP_FROM'"}
+  ${EXP_FROM:+"AND timestamp >= '$EXP_FROM'"}
+  ${EXP_FROM_E:+"AND timestamp > '$EXP_FROM_E'"}
   ${EXP_TO:+"AND timestamp < '$EXP_TO'"}
+  ${EXP_TO_I:+"AND timestamp <= '$EXP_TO_I'"}
   ${EXP_NETWORK:+"AND network_tag = '$EXP_NETWORK'"}
 ;
 EOF
@@ -328,8 +346,10 @@ COPY (
                timestamp
         FROM stats
         WHERE true
-          ${EXP_FROM:+"AND timestamp > '$EXP_FROM'"}
+          ${EXP_FROM:+"AND timestamp >= '$EXP_FROM'"}
+          ${EXP_FROM_E:+"AND timestamp > '$EXP_FROM_E'"}
           ${EXP_TO:+"AND timestamp < '$EXP_TO'"}
+          ${EXP_TO_I:+"AND timestamp <= '$EXP_TO_I'"}
           ${EXP_NETWORK:+"AND network_tag = '$EXP_NETWORK'"}
         WINDOW st AS(
             PARTITION BY network_tag, station.id, station.extra.uid
