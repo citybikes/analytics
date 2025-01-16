@@ -98,6 +98,9 @@ Commands:
     $ $EXP parquet --all --from 2024-11-01 --to 2024-12-01 -o dump/202411
     $ $EXP custom cb.duck --network bicing -o out.parquet -- \\
         "FORMAT 'parquet', CODEC 'zstd', COMPRESSION_LEVEL 22"
+    $ $EXP csv cb.duck --network bicing --from 2024-11-01 --to 2024-12-02 \\
+        | gzip > bicing.csv.gz
+    $ $EXP csv.gz --all --from 2024-11-01 --to 2024-12-01 -o dump/202411
 
 EOF
 }
