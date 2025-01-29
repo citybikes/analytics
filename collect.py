@@ -7,7 +7,7 @@ import argparse
 import sqlite3
 from importlib import resources
 
-from hyper.subscriber import ZMQSubscriber
+from citybikes.hyper.subscriber import ZMQSubscriber
 
 
 DB_URI = os.getenv("DB_URI", "citybikes.db")
