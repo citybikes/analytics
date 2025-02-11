@@ -176,7 +176,7 @@ $ http :8000/networks/bicing/stations/cd2e90920bcbabea6840fc65d766ac43/stats fro
 Aggregated hourly stats filtered by network, station and time frame
 
 ```console
-$ http :8000/networks/bicing/stations/cd2e90920bcbabea6840fc65d766ac43/stats/hourly from=='2024-11-01' to=='2024-12-01'
+$ http :8000/networks/bicing/stations/cd2e90920bcbabea6840fc65d766ac43/stats/hourly from=='2025-01-01' to=='2025-02-01
 {
   "id": "cd2e90920bcbabea6840fc65d766ac43",
   "latitude": 41.4074444,
