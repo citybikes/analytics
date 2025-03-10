@@ -32,7 +32,7 @@ This will create a `citybikes.db` sqlite file. Run aggregated queries like
 ### Get most active systems
 
 ```console
-$ sqlite3 stats.db << EOF
+$ sqlite3 citybikes.db << EOF
     SELECT count(*) as activity, network_tag
     FROM stats
     GROUP BY entity_id
@@ -44,7 +44,7 @@ EOF
 ### Get most active stations overall
 
 ```console
-$ sqlite3 stats.db << EOF
+$ sqlite3 citybikes.db << EOF
     SELECT count(*) as activity, entity_id, latitude, longitude, network_tag
     FROM stats
     GROUP BY entity_id
@@ -56,7 +56,7 @@ EOF
 ### Get most active stations on a particular system
 
 ```console
-$ sqlite3 stats.db << EOF
+$ sqlite3 citybikes.db << EOF
     SELECT count(*) as activity, entity_id, latitude, longitude, network_tag
     FROM stats
     WHERE network_tag = 'bicing'
