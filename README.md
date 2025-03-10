@@ -80,7 +80,11 @@ $ bash export.sh parquet stats.duck -o world.parquet
 ### Visualizing
 
 Use the plot script to visualize information. This script requires duckdb and
-a python environment with matplotlib.
+a python environment with matplotlib and pandas.
+
+```console
+$ pip install matplotlib pandas
+```
 
 ```console
 duckdb -s "COPY(\
