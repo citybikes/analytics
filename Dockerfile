@@ -37,3 +37,4 @@ WORKDIR /usr/src/app
 
 COPY migrations ./migrations
 COPY collect.py .
+COPY api.py .
