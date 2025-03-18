@@ -266,6 +266,10 @@ WHERE true
   ${EXP_NETWORK:+"AND network_tag = '$EXP_NETWORK'"}
 ;
 EOF
+        [[ -f $tmpfile ]] && ! [[ -s $tmpfile ]] && \
+          inf "$tmpfile exists, but it is empty and will be ignored" && \
+          exit 0
+
         inf "Populating $duckfile with data"
         duckdb $duckfile << EOF
 CREATE TABLE IF NOT EXISTS stats (
